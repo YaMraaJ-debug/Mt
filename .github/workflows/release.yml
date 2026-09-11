@@ -32,7 +32,7 @@ jobs:
           cache: 'gradle'
 
       - name: Make Gradlew Executable
-        run: chmod +x gradle
+        run: chmod +x gradlew
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
