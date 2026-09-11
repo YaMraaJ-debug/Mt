@@ -24,18 +24,49 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
-          cache: 'gradle'
+          distribution: 'temurin'
+          java-version: '21'
 
-      - name: Make Gradlew Executable
-        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Ensure Environment and Keystore
+        run: |
+          # Copy .env.example to .env for secrets plugin
+          if [ -f ".env.example" ]; then
+            cp .env.example .env
+          else
+            touch .env
+          fi
+
+          # Generate debug.keystore if missing to satisfy signing config
+          if [ ! -f "debug.keystore" ]; then
+            echo "Generating CI debug.keystore..."
+            keytool -genkey -v -keystore debug.keystore -storepass android \
+              -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 \
+              -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: Ensure Gradle Wrapper Executable
+        run: |
+          if [ ! -f "gradlew" ]; then
+            echo "Generating Gradle 9.3.1 wrapper..."
+            gradle wrapper --gradle-version 9.3.1
+          fi
+          chmod +x gradlew
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Verify APK Exists
+        run: |
+          ls -la app/build/outputs/apk/debug/
+          test -f app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -52,8 +83,8 @@ jobs:
           github.event_name == 'workflow_dispatch'
         with:
           files: app/build/outputs/apk/debug/app-debug.apk
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v1.0-build.{0}', github.run_number) }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && format('Release {0}', github.ref_name) || format('Release v1.0 (Build #{0})', github.run_number) }}
           draft: false
           prerelease: false
           generate_release_notes: true
