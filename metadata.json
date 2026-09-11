@@ -1,0 +1,6 @@
+{
+  "name": "G-Drive DL",
+  "description": "Multi-engine download manager for Google Drive, direct links, streams, and batch queues.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
